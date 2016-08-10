@@ -2,18 +2,16 @@ package cz.schrek.filemanager;
 
 import android.content.Context;
 import android.graphics.Color;
-import android.graphics.PorterDuff;
-import android.graphics.PorterDuffColorFilter;
-import android.graphics.drawable.Drawable;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.*;
+import android.widget.ArrayAdapter;
+import android.widget.ImageView;
+import android.widget.TextView;
 
 import java.io.File;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.function.DoublePredicate;
 
 /**
  * Created by ondra on 7. 8. 2016.
@@ -41,7 +39,7 @@ public class FileListAdapter extends ArrayAdapter<File> {
         Date date = new Date(selected.lastModified());
 
         if (selected.isDirectory()) {
-            if (selected.list() == null) {
+            if (selected.list() == null || selected.list().length == 0) {
                 icon.setImageResource(R.drawable.ic_folder_open_black_24dp);
                 int color = Color.parseColor("#808080"); //The color u want
                 icon.setColorFilter(color);

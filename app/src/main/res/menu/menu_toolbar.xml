@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+      xmlns:filemanager="http://schemas.android.com/apk/res-auto"
+>
+    <item android:id="@+id/addFile"
+          android:icon="@drawable/ic_add_box_black_24dp"
+          android:title="create new file"
+          filemanager:showAsAction="ifRoom"
+    />
+    <item android:id="@+id/refresh"
+          android:icon="@drawable/ic_autorenew_black_24dp"
+          android:title="refresh"
+          filemanager:showAsAction="ifRoom"
+    />
+    <item android:id="@+id/settings"
+          android:icon="@drawable/ic_build_black_24dp"
+          android:title="settings"
+          filemanager:showAsAction="never"
+    />
+</menu>
