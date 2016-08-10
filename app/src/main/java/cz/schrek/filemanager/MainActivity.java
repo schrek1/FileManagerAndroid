@@ -1,20 +1,27 @@
 package cz.schrek.filemanager;
 
-import android.graphics.PorterDuff;
-import android.graphics.PorterDuffColorFilter;
-import android.graphics.drawable.Drawable;
+import android.content.ActivityNotFoundException;
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
-import android.widget.*;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
+import android.webkit.MimeTypeMap;
+import android.widget.AdapterView;
+import android.widget.ListView;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import java.io.File;
 import java.io.FileFilter;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.function.Function;
 
 public class MainActivity extends AppCompatActivity {
     private File rootFile;
@@ -97,7 +104,6 @@ public class MainActivity extends AppCompatActivity {
         fileList.setAdapter(new FileListAdapter(MainActivity.this, fileContent));
     }
 
-
     private void init() {
         path = (TextView) findViewById(R.id.path);
         isEmpty = (TextView) findViewById(R.id.isEmpty);
@@ -110,21 +116,48 @@ public class MainActivity extends AppCompatActivity {
                 File selected = fileContent[position];
                 if (selected.isDirectory()) {
                     rootFile = selected;
-                    getFileContent();
+                    animationSlideLeft();
                 } else if (selected.isFile()) {
-                    //TODO dodelat otevreni defaultni aplikaci
+                    MimeTypeMap myMime = MimeTypeMap.getSingleton();
+                    Intent intent = new Intent(Intent.ACTION_VIEW);
+                    String mimeType = myMime.getMimeTypeFromExtension(fileExt(selected.getName()));
+                    intent.setDataAndType(Uri.fromFile(selected), mimeType);
+                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    try {
+                        MainActivity.this.startActivity(intent);
+                    } catch (ActivityNotFoundException e) {
+                        Toast.makeText(MainActivity.this, "Nenalezena aplikace pro tento typ souboru(" + mimeType + ").", Toast.LENGTH_SHORT).show();
+                    }
                 }
             }
         });
+
     }
 
+    private String fileExt(String fileName) {
+        if (fileName.indexOf("?") > -1) {
+            fileName = fileName.substring(0, fileName.indexOf("?"));
+        }
+        if (fileName.lastIndexOf(".") == -1) {
+            return null;
+        } else {
+            String ext = fileName.substring(fileName.lastIndexOf(".") + 1);
+            if (ext.indexOf("%") > -1) {
+                ext = ext.substring(0, ext.indexOf("%"));
+            }
+            if (ext.indexOf("/") > -1) {
+                ext = ext.substring(0, ext.indexOf("/"));
+            }
+            return ext.toLowerCase();
+        }
+    }
 
     @Override
     public void onBackPressed() {
         File parent = rootFile.getParentFile();
         if (parent != null) {
             rootFile = parent;
-            getFileContent();
+            animationSlideRight();
         } else {
             if (doubleBackToExitPressedOnce) {
                 super.onBackPressed();
@@ -143,4 +176,65 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void animationSlideRight() {
+        Animation animation;
+        if (isEmpty.getVisibility() == View.VISIBLE) {
+            getFileContent();
+            animation = AnimationUtils.loadAnimation(getApplicationContext(), R.anim.slide_empty);
+            animation.setAnimationListener(new Animation.AnimationListener() {
+                @Override
+                public void onAnimationStart(Animation animation) {
+                    isEmpty.setVisibility(View.GONE);
+                }
+
+                @Override
+                public void onAnimationEnd(Animation animation) {
+                }
+
+                @Override
+                public void onAnimationRepeat(Animation animation) {
+                }
+            });
+        } else {
+            animation = AnimationUtils.loadAnimation(getApplicationContext(), R.anim.slide_right);
+            animation.setAnimationListener(new Animation.AnimationListener() {
+                @Override
+                public void onAnimationStart(Animation animation) {
+
+                }
+
+                @Override
+                public void onAnimationEnd(Animation animation) {
+                    getFileContent();
+                }
+
+                @Override
+                public void onAnimationRepeat(Animation animation) {
+
+                }
+            });
+        }
+        fileList.startAnimation(animation);
+    }
+
+    private void animationSlideLeft() {
+        Animation animation = AnimationUtils.loadAnimation(getApplicationContext(), R.anim.slide_left);
+        animation.setAnimationListener(new Animation.AnimationListener() {
+            @Override
+            public void onAnimationStart(Animation animation) {
+
+            }
+
+            @Override
+            public void onAnimationEnd(Animation animation) {
+                getFileContent();
+            }
+
+            @Override
+            public void onAnimationRepeat(Animation animation) {
+
+            }
+        });
+        fileList.startAnimation(animation);
+    }
 }
