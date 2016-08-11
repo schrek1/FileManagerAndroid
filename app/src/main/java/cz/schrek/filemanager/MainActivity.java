@@ -14,9 +14,11 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
+import android.view.animation.TranslateAnimation;
 import android.webkit.MimeTypeMap;
 import android.widget.AdapterView;
 import android.widget.ListView;
@@ -25,6 +27,7 @@ import android.widget.Toast;
 
 import java.io.File;
 import java.io.FileFilter;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.function.Function;
@@ -49,9 +52,46 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    private void init() {
+        path = (TextView) findViewById(R.id.path);
+        isEmpty = (TextView) findViewById(R.id.isEmpty);
+        fileList = (ListView) findViewById(R.id.fileList);
+//        rootFile = Environment.getRootDirectory().getParentFile();
+        rootFile = new File("/storage/sdcard/Download");
+
+        fileList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int position, long id) {
+                File selected = fileContent[position];
+                if (selected.isDirectory()) {
+                    if (!selected.canRead()) {
+                        Toast.makeText(MainActivity.this, "Nelze cist ze slozky", Toast.LENGTH_SHORT).show();
+                    } else {
+                        rootFile = selected;
+                        animationSlideLeft();
+                    }
+                } else if (selected.isFile()) {
+                    if (selected.canExecute()) {
+                        MimeTypeMap myMime = MimeTypeMap.getSingleton();
+                        Intent intent = new Intent(Intent.ACTION_VIEW);
+                        String mimeType = myMime.getMimeTypeFromExtension(fileExt(selected.getName()));
+                        intent.setDataAndType(Uri.fromFile(selected), mimeType);
+                        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        try {
+                            MainActivity.this.startActivity(intent);
+                        } catch (ActivityNotFoundException e) {
+                            Toast.makeText(MainActivity.this, "Nenalezena aplikace pro tento typ souboru(" + mimeType + ").", Toast.LENGTH_SHORT).show();
+                        }
+                    } else {
+                        Toast.makeText(MainActivity.this, "Nelze spustit soubor", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            }
+        });
+    }
+
     private void getFileContent() {
         int numDirs = 0, numFiles = 0;
-
         path.setText(rootFile.getPath());
 
         File[] dirs = rootFile.listFiles(new FileFilter() {
@@ -108,6 +148,12 @@ public class MainActivity extends AppCompatActivity {
         Log.wtf("array print", Arrays.toString(fileContent));
 
         fileList.setAdapter(new FileListAdapter(MainActivity.this, fileContent));
+
+        if (rootFile.getParentFile() != null) {
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        } else {
+            getSupportActionBar().setDisplayHomeAsUpEnabled(false);
+        }
     }
 
     @Override
@@ -115,9 +161,9 @@ public class MainActivity extends AppCompatActivity {
         MenuInflater menuInflater = getMenuInflater();
         menuInflater.inflate(R.menu.menu_toolbar, menu);
 
-        for(int i = 0; i < menu.size(); i++){
+        for (int i = 0; i < menu.size(); i++) {
             Drawable drawable = menu.getItem(i).getIcon();
-            if(drawable != null) {
+            if (drawable != null) {
                 drawable.mutate();
                 drawable.setColorFilter(getResources().getColor(R.color.white), PorterDuff.Mode.SRC_ATOP);
             }
@@ -126,52 +172,70 @@ public class MainActivity extends AppCompatActivity {
         return super.onCreateOptionsMenu(menu);
     }
 
-    private void init() {
-        path = (TextView) findViewById(R.id.path);
-        isEmpty = (TextView) findViewById(R.id.isEmpty);
-        fileList = (ListView) findViewById(R.id.fileList);
-        rootFile = Environment.getRootDirectory().getParentFile();
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            // Respond to the action bar's Up/Home button
+            case android.R.id.home: {
+                onBackPressed();
+                return true;
+            }
+            case R.id.addFile: {
+                String[] files = rootFile.list();
+                String name = "test";
+                item.setEnabled(false);
+                if (rootFile.canWrite()) {
+                    if (files != null && files.length != 0) {
+                        boolean contains;
+                        int count = 0;
+                        Arrays.sort(files);
+                        do {
+                            int result;
+                            if (count == 0) {
+                                result = Arrays.binarySearch(files, name);
+                            } else {
+                                result = Arrays.binarySearch(files, name + count);
+                            }
 
-        fileList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> adapterView, View view, int position, long id) {
-                File selected = fileContent[position];
-                if (selected.isDirectory()) {
-                    rootFile = selected;
-                    animationSlideLeft();
-                } else if (selected.isFile()) {
-                    MimeTypeMap myMime = MimeTypeMap.getSingleton();
-                    Intent intent = new Intent(Intent.ACTION_VIEW);
-                    String mimeType = myMime.getMimeTypeFromExtension(fileExt(selected.getName()));
-                    intent.setDataAndType(Uri.fromFile(selected), mimeType);
-                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    try {
-                        MainActivity.this.startActivity(intent);
-                    } catch (ActivityNotFoundException e) {
-                        Toast.makeText(MainActivity.this, "Nenalezena aplikace pro tento typ souboru(" + mimeType + ").", Toast.LENGTH_SHORT).show();
+
+                            if (result <= -1) {
+                                contains = false;
+                                if (count != 0) {
+                                    name = name + count;
+                                }
+                            } else {
+                                count++;
+                                contains = true;
+                            }
+                        } while (contains == true);
                     }
+                    File newFile = new File(rootFile.getAbsolutePath() + "/" + name);
+                    try {
+                        newFile.createNewFile();
+                        Toast.makeText(MainActivity.this, "Soubor " + name + " byl vytvoren.", Toast.LENGTH_SHORT).show();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    } finally {
+                        item.setEnabled(true);
+                    }
+                } else {
+                    Toast.makeText(MainActivity.this, "Nelze zpisovat", Toast.LENGTH_SHORT).show();
                 }
+                return true;
             }
-        });
-
-    }
-
-    private String fileExt(String fileName) {
-        if (fileName.indexOf("?") > -1) {
-            fileName = fileName.substring(0, fileName.indexOf("?"));
+            case R.id.refresh: {
+                animationShake();
+                getFileContent();
+                return true;
+            }
+            case R.id.settings:
+                return true;
+            case R.id.shutdown:
+                finish();
+                return true;
         }
-        if (fileName.lastIndexOf(".") == -1) {
-            return null;
-        } else {
-            String ext = fileName.substring(fileName.lastIndexOf(".") + 1);
-            if (ext.indexOf("%") > -1) {
-                ext = ext.substring(0, ext.indexOf("%"));
-            }
-            if (ext.indexOf("/") > -1) {
-                ext = ext.substring(0, ext.indexOf("/"));
-            }
-            return ext.toLowerCase();
-        }
+
+        return super.onOptionsItemSelected(item);
     }
 
     @Override
@@ -222,7 +286,6 @@ public class MainActivity extends AppCompatActivity {
             animation.setAnimationListener(new Animation.AnimationListener() {
                 @Override
                 public void onAnimationStart(Animation animation) {
-
                 }
 
                 @Override
@@ -244,7 +307,6 @@ public class MainActivity extends AppCompatActivity {
         animation.setAnimationListener(new Animation.AnimationListener() {
             @Override
             public void onAnimationStart(Animation animation) {
-
             }
 
             @Override
@@ -258,5 +320,43 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         fileList.startAnimation(animation);
+    }
+
+    private void animationShake() {
+        Animation animation = AnimationUtils.loadAnimation(getApplicationContext(), R.anim.shake);
+        animation.setAnimationListener(new Animation.AnimationListener() {
+            @Override
+            public void onAnimationStart(Animation animation) {
+            }
+
+            @Override
+            public void onAnimationEnd(Animation animation) {
+                getFileContent();
+            }
+
+            @Override
+            public void onAnimationRepeat(Animation animation) {
+
+            }
+        });
+        fileList.startAnimation(animation);
+    }
+
+    private String fileExt(String fileName) {
+        if (fileName.indexOf("?") > -1) {
+            fileName = fileName.substring(0, fileName.indexOf("?"));
+        }
+        if (fileName.lastIndexOf(".") == -1) {
+            return null;
+        } else {
+            String ext = fileName.substring(fileName.lastIndexOf(".") + 1);
+            if (ext.indexOf("%") > -1) {
+                ext = ext.substring(0, ext.indexOf("%"));
+            }
+            if (ext.indexOf("/") > -1) {
+                ext = ext.substring(0, ext.indexOf("/"));
+            }
+            return ext.toLowerCase();
+        }
     }
 }
