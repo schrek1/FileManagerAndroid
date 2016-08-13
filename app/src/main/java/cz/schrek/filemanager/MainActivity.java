@@ -2,14 +2,13 @@ package cz.schrek.filemanager;
 
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
-import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.graphics.drawable.Drawable;
-import android.media.Image;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
+import android.os.Parcelable;
+import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Menu;
@@ -18,7 +17,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
-import android.view.animation.TranslateAnimation;
 import android.webkit.MimeTypeMap;
 import android.widget.AdapterView;
 import android.widget.ListView;
@@ -28,15 +26,13 @@ import android.widget.Toast;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.function.Function;
+import java.util.*;
 
 public class MainActivity extends AppCompatActivity {
     private File rootFile;
     private File[] fileContent;
     boolean doubleBackToExitPressedOnce = false;
-
+    private LinkedList<ListSettings> listStates = new LinkedList<>();
 
     private TextView path;
     private TextView isEmpty;
@@ -58,6 +54,7 @@ public class MainActivity extends AppCompatActivity {
         fileList = (ListView) findViewById(R.id.fileList);
 //        rootFile = Environment.getRootDirectory().getParentFile();
         rootFile = new File("/storage/sdcard/Download");
+        rootFile = new File("/");
 
         fileList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
@@ -68,6 +65,7 @@ public class MainActivity extends AppCompatActivity {
                         Toast.makeText(MainActivity.this, "Nelze cist ze slozky", Toast.LENGTH_SHORT).show();
                     } else {
                         rootFile = selected;
+                        saveListPostition(position);
                         animationSlideLeft();
                     }
                 } else if (selected.isFile()) {
@@ -89,6 +87,15 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
+
+
+    private void saveListPostition(int position) {
+        View v = fileList.getChildAt(0);
+        int top = (v == null) ? 0 : (v.getTop() - fileList.getPaddingTop());
+        listStates.addFirst(new ListSettings(top, fileList.getFirstVisiblePosition()));
+        Log.w("list>", listStates.toString());
+    }
+
 
     private void getFileContent() {
         int numDirs = 0, numFiles = 0;
@@ -145,7 +152,6 @@ public class MainActivity extends AppCompatActivity {
             System.arraycopy(files, 0, fileContent, dirs.length, files.length);
         }
 
-        Log.wtf("array print", Arrays.toString(fileContent));
 
         fileList.setAdapter(new FileListAdapter(MainActivity.this, fileContent));
 
@@ -228,11 +234,14 @@ public class MainActivity extends AppCompatActivity {
                 getFileContent();
                 return true;
             }
-            case R.id.settings:
+            case R.id.settings: {
+
                 return true;
-            case R.id.shutdown:
+            }
+            case R.id.shutdown: {
                 finish();
                 return true;
+            }
         }
 
         return super.onOptionsItemSelected(item);
@@ -275,6 +284,7 @@ public class MainActivity extends AppCompatActivity {
 
                 @Override
                 public void onAnimationEnd(Animation animation) {
+                    restoreListPosition();
                 }
 
                 @Override
@@ -291,6 +301,7 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void onAnimationEnd(Animation animation) {
                     getFileContent();
+                    restoreListPosition();
                 }
 
                 @Override
@@ -300,6 +311,20 @@ public class MainActivity extends AppCompatActivity {
             });
         }
         fileList.startAnimation(animation);
+    }
+
+    private void restoreListPosition() {
+        if (!listStates.isEmpty()) {
+            final ListSettings x = listStates.pollFirst();
+            fileList.post(new Runnable() {
+                @Override
+                public void run() {
+                    fileList.setSelectionFromTop(x.selected,x.fromTop);
+                }
+            });
+            Log.wtf("pop x", x + "");
+            Log.w("list>", listStates.toString());
+        }
     }
 
     private void animationSlideLeft() {
@@ -342,6 +367,7 @@ public class MainActivity extends AppCompatActivity {
         fileList.startAnimation(animation);
     }
 
+    @Nullable
     private String fileExt(String fileName) {
         if (fileName.indexOf("?") > -1) {
             fileName = fileName.substring(0, fileName.indexOf("?"));
@@ -357,6 +383,29 @@ public class MainActivity extends AppCompatActivity {
                 ext = ext.substring(0, ext.indexOf("/"));
             }
             return ext.toLowerCase();
+        }
+    }
+
+    public static class ListSettings implements Comparable{
+        public int selected;
+        public int fromTop;
+
+        public ListSettings(int fromTop, int selected) {
+            this.fromTop = fromTop;
+            this.selected = selected;
+        }
+
+        @Override
+        public String toString() {
+            return "ListSettings{" +
+                    "fromTop=" + fromTop +
+                    ", selected=" + selected +
+                    '}';
+        }
+
+        @Override
+        public int compareTo(Object o) {
+            return 0;
         }
     }
 }
