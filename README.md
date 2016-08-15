@@ -9,13 +9,9 @@ Jednoduchý souborový manager:
 
 aktuální složku a settings, které umožní změnu výchozí složky. Settings by mělo být v overflow menu.
 
-- při klepnutí na Setting se spustí nová aktivita s PreferenceFragment s jednou položkou "default
+- při klepnutí na Setting se spustí nová aktivita s PreferenceFragment s jednou položkou "defaultfolder"
 
-folder"
-
-- při spuštění app se načte výchozí složka (v separátním vlákně) a zobrazí se jako list položek v
-
-portrait a grid v landscape.
+- při spuštění app se načte výchozí složka (v separátním vlákně) a zobrazí se jako list položek v portrait a grid v landscape.
 
 - při klepnutí na položku složky se otevře daná složka (s libovolnou animaci)
 
