@@ -2,15 +2,15 @@ package cz.schrek.filemanager;
 
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.PorterDuff;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.Parcelable;
+import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -33,6 +33,7 @@ public class MainActivity extends AppCompatActivity {
     private File[] fileContent;
     boolean doubleBackToExitPressedOnce = false;
     private LinkedList<ListSettings> listStates = new LinkedList<>();
+    private SharedPreferences preferences;
 
     private TextView path;
     private TextView isEmpty;
@@ -43,6 +44,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+
         init();
         getFileContent();
 
@@ -52,9 +54,10 @@ public class MainActivity extends AppCompatActivity {
         path = (TextView) findViewById(R.id.path);
         isEmpty = (TextView) findViewById(R.id.isEmpty);
         fileList = (ListView) findViewById(R.id.fileList);
-//        rootFile = Environment.getRootDirectory().getParentFile();
+        preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        String defaultPath = preferences.getString("default_path", "/");
         rootFile = new File("/storage/sdcard/Download");
-        rootFile = new File("/");
+        rootFile = new File(defaultPath);
 
         fileList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
@@ -93,7 +96,6 @@ public class MainActivity extends AppCompatActivity {
         View v = fileList.getChildAt(0);
         int top = (v == null) ? 0 : (v.getTop() - fileList.getPaddingTop());
         listStates.addFirst(new ListSettings(top, fileList.getFirstVisiblePosition()));
-        Log.w("list>", listStates.toString());
     }
 
 
@@ -235,7 +237,7 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             }
             case R.id.settings: {
-
+                startActivity(new Intent(MainActivity.this, SettingsActivity.class));
                 return true;
             }
             case R.id.shutdown: {
@@ -322,8 +324,6 @@ public class MainActivity extends AppCompatActivity {
                     fileList.setSelectionFromTop(x.selected,x.fromTop);
                 }
             });
-            Log.wtf("pop x", x + "");
-            Log.w("list>", listStates.toString());
         }
     }
 
@@ -386,7 +386,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public static class ListSettings implements Comparable{
+    public static class ListSettings{
         public int selected;
         public int fromTop;
 
@@ -403,9 +403,5 @@ public class MainActivity extends AppCompatActivity {
                     '}';
         }
 
-        @Override
-        public int compareTo(Object o) {
-            return 0;
-        }
     }
 }
