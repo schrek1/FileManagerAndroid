@@ -5,9 +5,7 @@ Jednoduchý souborový manager:
 
 - aplikace bude umožňovat jednoduché procházení souborů v telefonu
 
-- aplikace bude obsahovat Toolbar, který bude obsahovat 2 action buttons. Refresh, které obnoví
-
-aktuální složku a settings, které umožní změnu výchozí složky. Settings by mělo být v overflow menu.
+- aplikace bude obsahovat Toolbar, který bude obsahovat 2 action buttons. Refresh, které obnoví aktuální složku a settings, které umožní změnu výchozí složky. Settings by mělo být v overflow menu.
 
 - při klepnutí na Setting se spustí nová aktivita s PreferenceFragment s jednou položkou "defaultfolder"
 
