@@ -3,6 +3,15 @@ package cz.schrek.filemanager;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.preference.*;
+import android.support.v7.app.ActionBar;
+import android.support.v7.widget.Toolbar;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+import butterknife.BindView;
+import butterknife.ButterKnife;
 
 import java.util.List;
 
@@ -14,6 +23,7 @@ public class SettingsActivity extends PreferenceActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         getFragmentManager().beginTransaction().replace(android.R.id.content, new SettingsFragment()).commit();
 
     }
@@ -22,6 +32,7 @@ public class SettingsActivity extends PreferenceActivity {
     public static class SettingsFragment extends PreferenceFragment {
 
         private SharedPreferences SP;
+
 
         @Override
         public void onCreate(Bundle savedInstanceState) {
@@ -46,8 +57,8 @@ public class SettingsActivity extends PreferenceActivity {
                 }
             });
 
-        }
 
+        }
 
     }
 }
