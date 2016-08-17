@@ -6,6 +6,7 @@ import android.content.SharedPreferences;
 import android.graphics.PorterDuff;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.preference.PreferenceManager;
@@ -15,6 +16,7 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.webkit.MimeTypeMap;
@@ -46,7 +48,7 @@ public class MainActivity extends AppCompatActivity {
 
 
         init();
-        getFileContent();
+        getFileContent(Operation.NOTHING);
 
     }
 
@@ -68,8 +70,8 @@ public class MainActivity extends AppCompatActivity {
                         Toast.makeText(MainActivity.this, "Nelze cist ze slozky", Toast.LENGTH_SHORT).show();
                     } else {
                         rootFile = selected;
-                        saveListPostition(position);
-                        animationSlideLeft();
+                        saveListPostition();
+                        getFileContent(Operation.OPEN);
                     }
                 } else if (selected.isFile()) {
                     if (selected.canExecute()) {
@@ -92,76 +94,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    private void saveListPostition(int position) {
+    private void saveListPostition() {
         View v = fileList.getChildAt(0);
         int top = (v == null) ? 0 : (v.getTop() - fileList.getPaddingTop());
         listStates.addFirst(new ListSettings(top, fileList.getFirstVisiblePosition()));
     }
 
 
-    private void getFileContent() {
-        int numDirs = 0, numFiles = 0;
-        path.setText(rootFile.getPath());
-
-        File[] dirs = rootFile.listFiles(new FileFilter() {
-            @Override
-            public boolean accept(File file) {
-                if (file.isDirectory())
-                    return true;
-                else
-                    return false;
-            }
-        });
-        File[] files = rootFile.listFiles(new FileFilter() {
-            @Override
-            public boolean accept(File file) {
-                if (file.isFile())
-                    return true;
-                else
-                    return false;
-            }
-        });
-        if (dirs != null) {
-            Arrays.sort(dirs, new Comparator<File>() {
-                @Override
-                public int compare(File f1, File f2) {
-                    return f1.getName().compareToIgnoreCase(f2.getName());
-                }
-            });
-            numDirs = dirs.length;
-        }
-        if (files != null) {
-            Arrays.sort(files, new Comparator<File>() {
-                @Override
-                public int compare(File f1, File f2) {
-                    return f1.getName().compareToIgnoreCase(f2.getName());
-                }
-            });
-            numFiles = files.length;
-        }
-        fileContent = new File[numDirs + numFiles];
-
-        if (numDirs + numFiles == 0) {
-            isEmpty.setVisibility(View.VISIBLE);
-        } else {
-            isEmpty.setVisibility(View.GONE);
-        }
-
-        if (dirs != null) {
-            System.arraycopy(dirs, 0, fileContent, 0, dirs.length);
-        }
-        if (files != null) {
-            System.arraycopy(files, 0, fileContent, dirs.length, files.length);
-        }
-
-
-        fileList.setAdapter(new FileListAdapter(MainActivity.this, fileContent));
-
-        if (rootFile.getParentFile() != null) {
-            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-        } else {
-            getSupportActionBar().setDisplayHomeAsUpEnabled(false);
-        }
+    private void getFileContent(Operation operation) {
+        new FileContentTask().execute(operation);
     }
 
     @Override
@@ -232,8 +173,8 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             }
             case R.id.refresh: {
-                animationShake();
-                getFileContent();
+                saveListPostition();
+                getFileContent(Operation.UPDATE);
                 return true;
             }
             case R.id.settings: {
@@ -251,10 +192,11 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
+        //TODO opravit
         File parent = rootFile.getParentFile();
         if (parent != null) {
             rootFile = parent;
-            animationSlideRight();
+            getFileContent(Operation.CLOSE);
         } else {
             if (doubleBackToExitPressedOnce) {
                 super.onBackPressed();
@@ -273,20 +215,20 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void animationSlideRight() {
+    private void animationSlideRight(final File[] files, boolean empty) {
         Animation animation;
-        if (isEmpty.getVisibility() == View.VISIBLE) {
-            getFileContent();
+        if (empty) {
             animation = AnimationUtils.loadAnimation(getApplicationContext(), R.anim.slide_empty);
             animation.setAnimationListener(new Animation.AnimationListener() {
                 @Override
                 public void onAnimationStart(Animation animation) {
                     isEmpty.setVisibility(View.GONE);
+                    fileList.setAdapter(new FileListAdapter(MainActivity.this, files));
+                    restoreListPosition();
                 }
 
                 @Override
                 public void onAnimationEnd(Animation animation) {
-                    restoreListPosition();
                 }
 
                 @Override
@@ -302,7 +244,7 @@ public class MainActivity extends AppCompatActivity {
 
                 @Override
                 public void onAnimationEnd(Animation animation) {
-                    getFileContent();
+                    fileList.setAdapter(new FileListAdapter(MainActivity.this, files));
                     restoreListPosition();
                 }
 
@@ -321,13 +263,13 @@ public class MainActivity extends AppCompatActivity {
             fileList.post(new Runnable() {
                 @Override
                 public void run() {
-                    fileList.setSelectionFromTop(x.selected,x.fromTop);
+                    fileList.setSelectionFromTop(x.selected, x.fromTop);
                 }
             });
         }
     }
 
-    private void animationSlideLeft() {
+    private void animationSlideLeft(final File[] files, final boolean empty) {
         Animation animation = AnimationUtils.loadAnimation(getApplicationContext(), R.anim.slide_left);
         animation.setAnimationListener(new Animation.AnimationListener() {
             @Override
@@ -336,7 +278,12 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onAnimationEnd(Animation animation) {
-                getFileContent();
+                fileList.setAdapter(new FileListAdapter(MainActivity.this, files));
+                if (empty) {
+                    isEmpty.setVisibility(View.VISIBLE);
+                } else {
+                    isEmpty.setVisibility(View.GONE);
+                }
             }
 
             @Override
@@ -347,16 +294,17 @@ public class MainActivity extends AppCompatActivity {
         fileList.startAnimation(animation);
     }
 
-    private void animationShake() {
+    private void animationShake(final File[] files) {
         Animation animation = AnimationUtils.loadAnimation(getApplicationContext(), R.anim.shake);
         animation.setAnimationListener(new Animation.AnimationListener() {
             @Override
             public void onAnimationStart(Animation animation) {
+                restoreListPosition();
+                fileList.setAdapter(new FileListAdapter(MainActivity.this, files));
             }
 
             @Override
             public void onAnimationEnd(Animation animation) {
-                getFileContent();
             }
 
             @Override
@@ -386,7 +334,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public static class ListSettings{
+    public static class ListSettings {
         public int selected;
         public int fromTop;
 
@@ -402,6 +350,98 @@ public class MainActivity extends AppCompatActivity {
                     ", selected=" + selected +
                     '}';
         }
+    }
 
+    class FileContentTask extends AsyncTask<Operation, Integer, File[]> {
+        private Operation operation;
+        private int numDirs = 0, numFiles = 0;
+
+        @Override
+        protected void onPreExecute() {
+            path.setText(rootFile.getPath());
+        }
+
+        @Override
+        protected File[] doInBackground(Operation... oper) {
+            operation = oper[0];
+
+            File[] dirs = rootFile.listFiles(new FileFilter() {
+                @Override
+                public boolean accept(File file) {
+                    if (file.isDirectory())
+                        return true;
+                    else
+                        return false;
+                }
+            });
+            File[] files = rootFile.listFiles(new FileFilter() {
+                @Override
+                public boolean accept(File file) {
+                    if (file.isFile())
+                        return true;
+                    else
+                        return false;
+                }
+            });
+            if (dirs != null) {
+                Arrays.sort(dirs, new Comparator<File>() {
+                    @Override
+                    public int compare(File f1, File f2) {
+                        return f1.getName().compareToIgnoreCase(f2.getName());
+                    }
+                });
+                numDirs = dirs.length;
+            }
+            if (files != null) {
+                Arrays.sort(files, new Comparator<File>() {
+                    @Override
+                    public int compare(File f1, File f2) {
+                        return f1.getName().compareToIgnoreCase(f2.getName());
+                    }
+                });
+                numFiles = files.length;
+            }
+            fileContent = new File[numDirs + numFiles];
+
+            publishProgress(numDirs, numFiles);
+
+            if (dirs != null) {
+                System.arraycopy(dirs, 0, fileContent, 0, dirs.length);
+            }
+            if (files != null) {
+                System.arraycopy(files, 0, fileContent, dirs.length, files.length);
+            }
+
+            return fileContent;
+        }
+
+        @Override
+        protected void onProgressUpdate(Integer... values) {
+        }
+
+        @Override
+        protected void onPostExecute(File[] files) {
+
+            if (rootFile.getParentFile() != null) {
+                getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+            } else {
+                getSupportActionBar().setDisplayHomeAsUpEnabled(false);
+            }
+
+            if (operation == Operation.OPEN) {
+                animationSlideLeft(files, (numDirs + numFiles == 0) ? true : false);
+            } else if (operation == Operation.CLOSE) {
+                animationSlideRight(files, isEmpty.getVisibility() == View.VISIBLE ? true : false);
+            } else if (operation == Operation.UPDATE) {
+                animationShake(files);
+            } else if (operation == Operation.NOTHING) {
+                fileList.setAdapter(new FileListAdapter(MainActivity.this, files));
+            }
+
+        }
+    }
+
+    private enum Operation {
+        OPEN, CLOSE, UPDATE, NOTHING
     }
 }
