@@ -20,3 +20,5 @@ Jednoduchý souborový manager:
 Všechny vybrané položky musí být viditelně zvýrazněné.
 
 Aplikaci vytvářejte tak, jak byste ji chtěli sami používat.
+
+![alt tag](https://github.com/schrek1/FileManagerAndroid/blob/master/pic1.png?raw=true)
