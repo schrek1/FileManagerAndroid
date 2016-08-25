@@ -21,10 +21,7 @@ import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.webkit.MimeTypeMap;
-import android.widget.AdapterView;
-import android.widget.ListView;
-import android.widget.TextView;
-import android.widget.Toast;
+import android.widget.*;
 
 import java.io.File;
 import java.io.FileFilter;
@@ -40,6 +37,7 @@ public class MainActivity extends AppCompatActivity{
 
     private TextView path;
     private TextView isEmpty;
+
     private ListView fileList;
 
     @Override
