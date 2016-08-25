@@ -11,6 +11,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -30,7 +31,7 @@ import java.io.FileFilter;
 import java.io.IOException;
 import java.util.*;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity{
     private File rootFile;
     private File[] fileContent;
     boolean doubleBackToExitPressedOnce = false;
@@ -421,7 +422,6 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected void onPostExecute(File[] files) {
-
             if (rootFile.getParentFile() != null) {
                 getSupportActionBar().setDisplayHomeAsUpEnabled(true);
             } else {
@@ -437,7 +437,6 @@ public class MainActivity extends AppCompatActivity {
             } else if (operation == Operation.NOTHING) {
                 fileList.setAdapter(new FileListAdapter(MainActivity.this, files));
             }
-
         }
     }
 
