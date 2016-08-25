@@ -1,6 +1,7 @@
 package cz.schrek.filemanager;
 
 import android.content.Context;
+import android.content.res.Configuration;
 import android.graphics.Color;
 import android.view.View;
 import android.view.ViewGroup;
@@ -20,11 +21,10 @@ public class FileListAdapter extends ArrayAdapter<File> {
     private File[] fileContent;
     private Context context;
 
-    public FileListAdapter(Context context, File[] files) {
-        super(context, R.layout.row, R.id.label, files);
+    public FileListAdapter(Context context, File[] files, int resource) {
+        super(context, resource, R.id.label, files);
         fileContent = files;
         this.context = context;
-
     }
 
     public View getView(int position, View convertView, ViewGroup parent) {
@@ -48,14 +48,18 @@ public class FileListAdapter extends ArrayAdapter<File> {
                 int color = Color.parseColor("#ffc425"); //The color u want
                 icon.setColorFilter(color);
             }
-            details.setText("<dir> \t " + formater.format(date));
+            if (context.getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
+                details.setText("<dir> \t " + formater.format(date));
+            }
         } else if (selected.isFile()) {
             icon.setImageResource(R.drawable.ic_insert_drive_file_black_24dp);
             int color = Color.parseColor("#004d99"); //The color u want
             icon.setColorFilter(color);
 
             String fileSize = getFileSize(selected.length());
-            details.setText(fileSize + " \t " + formater.format(date));
+            if (context.getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
+                details.setText(fileSize + " \t " + formater.format(date));
+            }
         }
 
         label.setText(selected.getName());

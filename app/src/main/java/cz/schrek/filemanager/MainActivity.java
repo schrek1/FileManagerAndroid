@@ -3,6 +3,7 @@ package cz.schrek.filemanager;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.Configuration;
 import android.graphics.PorterDuff;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
@@ -28,7 +29,7 @@ import java.io.FileFilter;
 import java.io.IOException;
 import java.util.*;
 
-public class MainActivity extends AppCompatActivity{
+public class MainActivity extends AppCompatActivity {
     private File rootFile;
     private File[] fileContent;
     boolean doubleBackToExitPressedOnce = false;
@@ -38,7 +39,7 @@ public class MainActivity extends AppCompatActivity{
     private TextView path;
     private TextView isEmpty;
 
-    private ListView fileList;
+    private AbsListView fileList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,11 +55,17 @@ public class MainActivity extends AppCompatActivity{
     private void init() {
         path = (TextView) findViewById(R.id.path);
         isEmpty = (TextView) findViewById(R.id.isEmpty);
-        fileList = (ListView) findViewById(R.id.fileList);
         preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         String defaultPath = preferences.getString("default_path", "/");
         rootFile = new File("/storage/sdcard/Download");
         rootFile = new File(defaultPath);
+
+
+        if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
+            fileList = (ListView) findViewById(R.id.fileList);
+        } else {
+            fileList = (GridView) findViewById(R.id.fileGrid);
+        }
 
         fileList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
@@ -222,7 +229,7 @@ public class MainActivity extends AppCompatActivity{
                 @Override
                 public void onAnimationStart(Animation animation) {
                     isEmpty.setVisibility(View.GONE);
-                    fileList.setAdapter(new FileListAdapter(MainActivity.this, files));
+                    fileList.setAdapter(new FileListAdapter(MainActivity.this, files, getLayout()));
                     restoreListPosition();
                 }
 
@@ -243,7 +250,7 @@ public class MainActivity extends AppCompatActivity{
 
                 @Override
                 public void onAnimationEnd(Animation animation) {
-                    fileList.setAdapter(new FileListAdapter(MainActivity.this, files));
+                    fileList.setAdapter(new FileListAdapter(MainActivity.this, files, getLayout()));
                     restoreListPosition();
                 }
 
@@ -262,7 +269,12 @@ public class MainActivity extends AppCompatActivity{
             fileList.post(new Runnable() {
                 @Override
                 public void run() {
-                    fileList.setSelectionFromTop(x.selected, x.fromTop);
+                    if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
+                        ((ListView)fileList).setSelectionFromTop(x.selected, x.fromTop);
+                    }else{
+//                        ((GridView)fileList).setSelectionFromTop(x.selected, x.fromTop);
+                        ((GridView)fileList).setSelection(x.selected);
+                    }
                 }
             });
         }
@@ -277,7 +289,7 @@ public class MainActivity extends AppCompatActivity{
 
             @Override
             public void onAnimationEnd(Animation animation) {
-                fileList.setAdapter(new FileListAdapter(MainActivity.this, files));
+                fileList.setAdapter(new FileListAdapter(MainActivity.this, files, getLayout()));
                 if (empty) {
                     isEmpty.setVisibility(View.VISIBLE);
                 } else {
@@ -299,7 +311,7 @@ public class MainActivity extends AppCompatActivity{
             @Override
             public void onAnimationStart(Animation animation) {
                 restoreListPosition();
-                fileList.setAdapter(new FileListAdapter(MainActivity.this, files));
+                fileList.setAdapter(new FileListAdapter(MainActivity.this, files, getLayout()));
             }
 
             @Override
@@ -433,8 +445,16 @@ public class MainActivity extends AppCompatActivity{
             } else if (operation == Operation.UPDATE) {
                 animationShake(files);
             } else if (operation == Operation.NOTHING) {
-                fileList.setAdapter(new FileListAdapter(MainActivity.this, files));
+                fileList.setAdapter(new FileListAdapter(MainActivity.this, files, getLayout()));
             }
+        }
+    }
+
+    private int getLayout(){
+        if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
+            return R.layout.row;
+        }else{
+            return R.layout.item;
         }
     }
 

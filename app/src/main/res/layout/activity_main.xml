@@ -30,6 +30,18 @@
               android:layout_below="@id/line"
     />
 
+    <GridView android:id="@+id/fileGrid"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:layout_below="@id/line"
+              android:verticalSpacing="40dp"
+              android:horizontalSpacing="5dp"
+              android:numColumns="auto_fit"
+              android:columnWidth="100dp"
+              android:stretchMode="columnWidth"
+              android:gravity="center"
+    />
+
     <TextView android:id="@+id/isEmpty"
               android:text="Slozka je prazdna"
               android:visibility="gone"
@@ -37,5 +49,6 @@
               android:layout_height="wrap_content"
               android:layout_centerInParent="true"
     />
+
 
 </RelativeLayout>
