@@ -21,5 +21,6 @@
               android:typeface="sans"
               android:layout_centerHorizontal="true"
               android:layout_alignParentBottom="true"
+              android:maxLines="1"
     />
 </RelativeLayout>

@@ -30,6 +30,8 @@ import java.io.IOException;
 import java.util.*;
 
 public class MainActivity extends AppCompatActivity {
+    public static final String KEY_PATH = "path";
+
     private File rootFile;
     private File[] fileContent;
     boolean doubleBackToExitPressedOnce = false;
@@ -47,16 +49,21 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
 
-        init();
+        init(savedInstanceState);
         getFileContent(Operation.NOTHING);
 
     }
 
-    private void init() {
+    private void init(Bundle savedInstanceState) {
         path = (TextView) findViewById(R.id.path);
         isEmpty = (TextView) findViewById(R.id.isEmpty);
         preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-        String defaultPath = preferences.getString("default_path", "/");
+        String defaultPath;
+        if (savedInstanceState != null) {
+            defaultPath = savedInstanceState.getString(KEY_PATH, preferences.getString("default_path", "/"));
+        } else {
+            defaultPath =  preferences.getString("default_path", "/");
+        }
         rootFile = new File("/storage/sdcard/Download");
         rootFile = new File(defaultPath);
 
@@ -197,6 +204,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+
+        outState.putString(KEY_PATH, path.getText().toString());
+    }
+
+    @Override
     public void onBackPressed() {
         //TODO opravit
         File parent = rootFile.getParentFile();
@@ -270,10 +284,10 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void run() {
                     if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
-                        ((ListView)fileList).setSelectionFromTop(x.selected, x.fromTop);
-                    }else{
+                        ((ListView) fileList).setSelectionFromTop(x.selected, x.fromTop);
+                    } else {
 //                        ((GridView)fileList).setSelectionFromTop(x.selected, x.fromTop);
-                        ((GridView)fileList).setSelection(x.selected);
+                        ((GridView) fileList).setSelection(x.selected);
                     }
                 }
             });
@@ -450,10 +464,10 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private int getLayout(){
+    private int getLayout() {
         if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
             return R.layout.row;
-        }else{
+        } else {
             return R.layout.item;
         }
     }
