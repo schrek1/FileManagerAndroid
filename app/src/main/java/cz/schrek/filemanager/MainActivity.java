@@ -12,7 +12,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
-import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -31,6 +30,7 @@ import java.util.*;
 
 public class MainActivity extends AppCompatActivity {
     public static final String KEY_PATH = "path";
+    public static final String KEY_IS_EMPTY = "isempty";
 
     private File rootFile;
     private File[] fileContent;
@@ -39,7 +39,7 @@ public class MainActivity extends AppCompatActivity {
     private SharedPreferences preferences;
 
     private TextView path;
-    private TextView isEmpty;
+    private TextView emptyLabel;
 
     private AbsListView fileList;
 
@@ -56,13 +56,18 @@ public class MainActivity extends AppCompatActivity {
 
     private void init(Bundle savedInstanceState) {
         path = (TextView) findViewById(R.id.path);
-        isEmpty = (TextView) findViewById(R.id.isEmpty);
+        emptyLabel = (TextView) findViewById(R.id.isEmpty);
         preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         String defaultPath;
         if (savedInstanceState != null) {
             defaultPath = savedInstanceState.getString(KEY_PATH, preferences.getString("default_path", "/"));
+            if (savedInstanceState.getBoolean(KEY_IS_EMPTY)) {
+                emptyLabel.setVisibility(View.VISIBLE);
+            } else {
+                emptyLabel.setVisibility(View.GONE);
+            }
         } else {
-            defaultPath =  preferences.getString("default_path", "/");
+            defaultPath = preferences.getString("default_path", "/");
         }
         rootFile = new File("/storage/sdcard/Download");
         rootFile = new File(defaultPath);
@@ -208,6 +213,7 @@ public class MainActivity extends AppCompatActivity {
         super.onSaveInstanceState(outState);
 
         outState.putString(KEY_PATH, path.getText().toString());
+        outState.putBoolean(KEY_IS_EMPTY, emptyLabel.getVisibility() == View.VISIBLE ? true : false);
     }
 
     @Override
@@ -242,7 +248,7 @@ public class MainActivity extends AppCompatActivity {
             animation.setAnimationListener(new Animation.AnimationListener() {
                 @Override
                 public void onAnimationStart(Animation animation) {
-                    isEmpty.setVisibility(View.GONE);
+                    emptyLabel.setVisibility(View.GONE);
                     fileList.setAdapter(new FileListAdapter(MainActivity.this, files, getLayout()));
                     restoreListPosition();
                 }
@@ -305,9 +311,9 @@ public class MainActivity extends AppCompatActivity {
             public void onAnimationEnd(Animation animation) {
                 fileList.setAdapter(new FileListAdapter(MainActivity.this, files, getLayout()));
                 if (empty) {
-                    isEmpty.setVisibility(View.VISIBLE);
+                    emptyLabel.setVisibility(View.VISIBLE);
                 } else {
-                    isEmpty.setVisibility(View.GONE);
+                    emptyLabel.setVisibility(View.GONE);
                 }
             }
 
@@ -452,11 +458,20 @@ public class MainActivity extends AppCompatActivity {
                 getSupportActionBar().setDisplayHomeAsUpEnabled(false);
             }
 
+            int countFiles = numDirs + numFiles;
+
+            if (countFiles > 0 && emptyLabel.getVisibility() == View.VISIBLE) {
+                emptyLabel.setVisibility(View.GONE);
+            }
+
             if (operation == Operation.OPEN) {
-                animationSlideLeft(files, (numDirs + numFiles == 0) ? true : false);
+                animationSlideLeft(files, (countFiles == 0) ? true : false);
             } else if (operation == Operation.CLOSE) {
-                animationSlideRight(files, isEmpty.getVisibility() == View.VISIBLE ? true : false);
+                animationSlideRight(files, emptyLabel.getVisibility() == View.VISIBLE ? true : false);
             } else if (operation == Operation.UPDATE) {
+                if (emptyLabel.getVisibility() == View.VISIBLE && files.length > 0) {
+                    emptyLabel.setVisibility(View.GONE);
+                }
                 animationShake(files);
             } else if (operation == Operation.NOTHING) {
                 fileList.setAdapter(new FileListAdapter(MainActivity.this, files, getLayout()));
