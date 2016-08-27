@@ -4,6 +4,7 @@ import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
+import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
@@ -13,6 +14,7 @@ import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.view.ActionMode;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -29,14 +31,15 @@ import java.io.IOException;
 import java.util.*;
 
 public class MainActivity extends AppCompatActivity {
-    public static final String KEY_PATH = "path";
-    public static final String KEY_IS_EMPTY = "isempty";
+    private static final String KEY_PATH = "path";
+    private static final String KEY_IS_EMPTY = "isempty";
 
     private File rootFile;
     private File[] fileContent;
     boolean doubleBackToExitPressedOnce = false;
     private LinkedList<ListSettings> listStates = new LinkedList<>();
     private SharedPreferences preferences;
+
 
     private TextView path;
     private TextView emptyLabel;
@@ -47,7 +50,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
 
         init(savedInstanceState);
         getFileContent(Operation.NOTHING);
@@ -78,6 +80,77 @@ public class MainActivity extends AppCompatActivity {
         } else {
             fileList = (GridView) findViewById(R.id.fileGrid);
         }
+
+        fileList.setChoiceMode(AbsListView.CHOICE_MODE_MULTIPLE_MODAL);
+
+        fileList.setMultiChoiceModeListener(new AbsListView.MultiChoiceModeListener() {
+
+            int nr = 0;
+
+            @Override
+            public void onItemCheckedStateChanged(android.view.ActionMode actionMode, int position, long id, boolean checked) {
+                if (checked) {
+                    nr++;
+                    ((FileListAdapter) fileList.getAdapter()).setNewSelection(position, checked);
+                } else {
+                    nr--;
+                    ((FileListAdapter) fileList.getAdapter()).removeSelection(position);
+                }
+            }
+
+            @Override
+            public boolean onCreateActionMode(android.view.ActionMode actionMode, Menu menu) {
+                nr = 0;
+                getMenuInflater().inflate(R.menu.context_toolbar, menu);
+                colorIcon(menu, R.color.white);
+                return true;
+            }
+
+            @Override
+            public boolean onPrepareActionMode(android.view.ActionMode actionMode, Menu menu) {
+                return false;
+            }
+
+            @Override
+            public boolean onActionItemClicked(android.view.ActionMode actionMode, MenuItem menuItem) {
+                switch (menuItem.getItemId()) {
+                    case R.id.context_delete: {
+                        FileListAdapter fla = ((FileListAdapter) fileList.getAdapter());
+                        Set<Integer> selected = fla.getListSelection();
+                        Iterator<Integer> iterator = selected.iterator();
+                        boolean success = true;
+                        while (iterator.hasNext()) {
+                            int positon = iterator.next();
+                            boolean deleted = fileContent[positon].delete();
+                            success = ((success == false)) ? success : deleted;
+                        }
+                        if(!success){
+                            Toast.makeText(getApplicationContext(),"Nepodarilo se vse smazat!",Toast.LENGTH_SHORT).show();
+                        }
+                        nr = 0;
+                        fla.clearSelection();
+                        getFileContent(Operation.UPDATE);
+                        actionMode.finish();
+                    }
+                }
+
+                return false;
+            }
+
+            @Override
+            public void onDestroyActionMode(android.view.ActionMode actionMode) {
+                ((FileListAdapter) fileList.getAdapter()).clearSelection();
+            }
+        });
+
+        fileList.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(AdapterView<?> adapterView, View view, int position, long id) {
+                fileList.setItemChecked(position, ((FileListAdapter) fileList.getAdapter()).isPositionChecked(position));
+                return false;
+            }
+        });
+
 
         fileList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
@@ -128,15 +201,19 @@ public class MainActivity extends AppCompatActivity {
         MenuInflater menuInflater = getMenuInflater();
         menuInflater.inflate(R.menu.menu_toolbar, menu);
 
+        colorIcon(menu, R.color.white);
+
+        return super.onCreateOptionsMenu(menu);
+    }
+
+    private void colorIcon(Menu menu, int color) {
         for (int i = 0; i < menu.size(); i++) {
             Drawable drawable = menu.getItem(i).getIcon();
             if (drawable != null) {
                 drawable.mutate();
-                drawable.setColorFilter(getResources().getColor(R.color.white), PorterDuff.Mode.SRC_ATOP);
+                drawable.setColorFilter(getResources().getColor(color), PorterDuff.Mode.SRC_ATOP);
             }
         }
-
-        return super.onCreateOptionsMenu(menu);
     }
 
     @Override
@@ -383,6 +460,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+
     class FileContentTask extends AsyncTask<Operation, Integer, File[]> {
         private Operation operation;
         private int numDirs = 0, numFiles = 0;
@@ -460,8 +538,10 @@ public class MainActivity extends AppCompatActivity {
 
             int countFiles = numDirs + numFiles;
 
-            if (countFiles > 0 && emptyLabel.getVisibility() == View.VISIBLE) {
+            if (countFiles > 0) {
                 emptyLabel.setVisibility(View.GONE);
+            }else{
+                emptyLabel.setVisibility(View.VISIBLE);
             }
 
             if (operation == Operation.OPEN) {
@@ -469,9 +549,6 @@ public class MainActivity extends AppCompatActivity {
             } else if (operation == Operation.CLOSE) {
                 animationSlideRight(files, emptyLabel.getVisibility() == View.VISIBLE ? true : false);
             } else if (operation == Operation.UPDATE) {
-                if (emptyLabel.getVisibility() == View.VISIBLE && files.length > 0) {
-                    emptyLabel.setVisibility(View.GONE);
-                }
                 animationShake(files);
             } else if (operation == Operation.NOTHING) {
                 fileList.setAdapter(new FileListAdapter(MainActivity.this, files, getLayout()));

@@ -13,6 +13,8 @@ import java.io.File;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Set;
 
 /**
  * Created by ondra on 7. 8. 2016.
@@ -20,6 +22,7 @@ import java.util.Date;
 public class FileListAdapter extends ArrayAdapter<File> {
     private File[] fileContent;
     private Context context;
+    private HashMap<Integer, Boolean> listSelection = new HashMap<>();
 
     public FileListAdapter(Context context, File[] files, int resource) {
         super(context, resource, R.id.label, files);
@@ -37,6 +40,11 @@ public class FileListAdapter extends ArrayAdapter<File> {
 
         SimpleDateFormat formater = new SimpleDateFormat("dd.MM. yy HH:mm");
         Date date = new Date(selected.lastModified());
+
+        row.setBackgroundColor(context.getResources().getColor(android.R.color.background_light));
+        if (listSelection.get(position) != null) {
+            row.setBackgroundColor(context.getResources().getColor(android.R.color.holo_blue_light));
+        }
 
         if (selected.isDirectory()) {
             if (selected.list() == null || selected.list().length == 0) {
@@ -88,5 +96,28 @@ public class FileListAdapter extends ArrayAdapter<File> {
         }
     }
 
+    public void clearSelection() {
+        listSelection = new HashMap<>();
+        notifyDataSetChanged();
+    }
 
+    public Set<Integer> getListSelection() {
+        return this.listSelection.keySet();
+    }
+
+
+    public void setNewSelection(int position, boolean checked) {
+        listSelection.put(position, checked);
+        notifyDataSetChanged();
+    }
+
+    public void removeSelection(int position) {
+        listSelection.remove(position);
+        notifyDataSetChanged();
+    }
+
+    public boolean isPositionChecked(int position) {
+        Boolean result = listSelection.get(position);
+        return result == null ? false : result;
+    }
 }
